@@ -4,22 +4,57 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../shared/widgets/aurora_background.dart';
+import '../../../shared/widgets/search_bar_widget.dart';
+import '../../../shared/widgets/filter_chips_widget.dart';
 import '../../activity/data/models/activity_model.dart';
 import '../../activity/data/models/activity_provider.dart';
 import '../../activity/presentation/add_activity_screen.dart';
 
-class HomeScreen extends ConsumerWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends ConsumerState<HomeScreen> {
+  String _searchQuery = '';
+  String? _filterCategory;
+  int? _filterPriority;
+
+  List<Activity> _applyFilters(List<Activity> list) {
+    return list.where((a) {
+      final matchSearch = _searchQuery.isEmpty ||
+          a.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+          a.category.toLowerCase().contains(_searchQuery.toLowerCase());
+      final matchCategory =
+          _filterCategory == null || a.category == _filterCategory;
+      final matchPriority =
+          _filterPriority == null || a.priority == _filterPriority;
+      return matchSearch && matchCategory && matchPriority;
+    }).toList();
+  }
+
+  String _formattedDate() {
+    final now = DateTime.now();
+    final days = [
+      'Senin','Selasa','Rabu','Kamis','Jumat','Sabtu','Minggu'
+    ];
+    final months = [
+      'Jan','Feb','Mar','Apr','Mei','Jun',
+      'Jul','Ags','Sep','Okt','Nov','Des'
+    ];
+    return '${days[now.weekday - 1]}, ${now.day} ${months[now.month - 1]} ${now.year}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final todayList = ref.watch(todayActivitiesProvider);
-    final allList = ref.watch(activityProvider);
+    final filteredList = _applyFilters(todayList);
     final doneCount = todayList.where((a) => a.isDone).length;
-    final streak = allList.isEmpty
+    final streak = todayList.isEmpty
         ? 0
-        : (doneCount / (todayList.isEmpty ? 1 : todayList.length) * 100)
-            .round();
+        : (doneCount / todayList.length * 100).round();
 
     return Scaffold(
       backgroundColor: AppColors.bg,
@@ -33,6 +68,7 @@ class HomeScreen extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const SizedBox(height: 24),
+                  // Header
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -72,7 +108,8 @@ class HomeScreen extends ConsumerWidget {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 20),
+                  // Stat cards
                   Row(
                     children: [
                       _StatCard(
@@ -91,36 +128,81 @@ class HomeScreen extends ConsumerWidget {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 28),
-                  Text(
-                    'JADWAL HARI INI',
-                    style: Theme.of(context).textTheme.labelMedium!.copyWith(
-                          color: AppColors.violetLight,
-                          letterSpacing: 1.2,
-                          fontSize: 10,
-                        ),
+                  const SizedBox(height: 20),
+                  // Search bar
+                  SearchBarWidget(
+                    onChanged: (q) => setState(() => _searchQuery = q),
+                    onClear: () => setState(() => _searchQuery = ''),
                   ),
                   const SizedBox(height: 12),
+                  // Filter chips
+                  FilterChipsWidget(
+                    selectedCategory: _filterCategory,
+                    selectedPriority: _filterPriority,
+                    onCategoryChanged: (c) =>
+                        setState(() => _filterCategory = c),
+                    onPriorityChanged: (p) =>
+                        setState(() => _filterPriority = p),
+                  ),
+                  const SizedBox(height: 16),
+                  // Section title
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'JADWAL HARI INI',
+                        style: Theme.of(context)
+                            .textTheme
+                            .labelMedium!
+                            .copyWith(
+                              color: AppColors.violetLight,
+                              letterSpacing: 1.2,
+                              fontSize: 10,
+                            ),
+                      ),
+                      if (filteredList.isNotEmpty)
+                        Text(
+                          '${filteredList.length} kegiatan',
+                          style: const TextStyle(
+                            color: AppColors.textTertiary,
+                            fontSize: 11,
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  // Activity list
                   Expanded(
-                    child: todayList.isEmpty
+                    child: filteredList.isEmpty
                         ? Center(
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Icon(
-                                  Icons.add_circle_outline_rounded,
+                                  _searchQuery.isNotEmpty ||
+                                          _filterCategory != null ||
+                                          _filterPriority != null
+                                      ? Icons.search_off_rounded
+                                      : Icons.add_circle_outline_rounded,
                                   size: 48,
                                   color: AppColors.textTertiary,
                                 ),
                                 const SizedBox(height: 12),
                                 Text(
-                                  'Belum ada kegiatan',
-                                  style:
-                                      Theme.of(context).textTheme.bodyMedium,
+                                  _searchQuery.isNotEmpty ||
+                                          _filterCategory != null ||
+                                          _filterPriority != null
+                                      ? 'Tidak ada hasil'
+                                      : 'Belum ada kegiatan',
+                                  style: Theme.of(context).textTheme.bodyMedium,
                                 ),
                                 const SizedBox(height: 6),
                                 Text(
-                                  'Tap + untuk tambah kegiatan',
+                                  _searchQuery.isNotEmpty ||
+                                          _filterCategory != null ||
+                                          _filterPriority != null
+                                      ? 'Coba ubah filter atau kata kunci'
+                                      : 'Tap + untuk tambah kegiatan',
                                   style: Theme.of(context)
                                       .textTheme
                                       .bodyMedium!
@@ -134,17 +216,18 @@ class HomeScreen extends ConsumerWidget {
                           )
                         : ListView.separated(
                             padding: const EdgeInsets.only(bottom: 100),
-                            itemCount: todayList.length,
+                            itemCount: filteredList.length,
                             separatorBuilder: (_, __) =>
                                 const SizedBox(height: 8),
                             itemBuilder: (context, i) =>
-                                _ActivityItem(activity: todayList[i]),
+                                _ActivityItem(activity: filteredList[i]),
                           ),
                   ),
                 ],
               ),
             ),
           ),
+          // FAB
           Positioned(
             bottom: 20,
             left: 0,
@@ -191,13 +274,6 @@ class HomeScreen extends ConsumerWidget {
       ),
     );
   }
-
-  String _formattedDate() {
-    final now = DateTime.now();
-    final days = ['Senin','Selasa','Rabu','Kamis','Jumat','Sabtu','Minggu'];
-    final months = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Ags','Sep','Okt','Nov','Des'];
-    return '${days[now.weekday - 1]}, ${now.day} ${months[now.month - 1]} ${now.year}';
-  }
 }
 
 class _ActivityItem extends ConsumerWidget {
@@ -207,8 +283,6 @@ class _ActivityItem extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final priorityColor = AppColors.forPriority(activity.priority);
-    final priorityLabels = AppConstants.priorityLabels;
-
     return Dismissible(
       key: Key(activity.id),
       direction: DismissDirection.endToStart,
@@ -278,6 +352,29 @@ class _ActivityItem extends ConsumerWidget {
                   ],
                 ),
               ),
+              if (activity.reminderMinutes != null)
+                Container(
+                  margin: const EdgeInsets.only(right: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.cyan.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: AppColors.cyanLight.withOpacity(0.3),
+                    ),
+                  ),
+                  child: Text(
+                    '${activity.reminderMinutes}m',
+                    style: const TextStyle(
+                      fontSize: 9,
+                      color: AppColors.cyanLight,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 8,
@@ -291,7 +388,7 @@ class _ActivityItem extends ConsumerWidget {
                   ),
                 ),
                 child: Text(
-                  priorityLabels[activity.priority],
+                  AppConstants.priorityLabels[activity.priority],
                   style: TextStyle(
                     fontSize: 9,
                     fontWeight: FontWeight.w700,
