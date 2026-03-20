@@ -1,11 +1,36 @@
+import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 import 'activity_model.dart';
 
 const _uuid = Uuid();
+const _prefKey = 'activities';
 
 class ActivityNotifier extends StateNotifier<List<Activity>> {
-  ActivityNotifier() : super([]);
+  ActivityNotifier() : super([]) {
+    _load();
+  }
+
+  Future<void> _load() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_prefKey);
+    if (raw == null) return;
+    try {
+      final list = (jsonDecode(raw) as List)
+          .map((e) => Activity.fromJson(e as Map<String, dynamic>))
+          .toList();
+      state = list;
+    } catch (_) {}
+  }
+
+  Future<void> _save() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      _prefKey,
+      jsonEncode(state.map((a) => a.toJson()).toList()),
+    );
+  }
 
   void add({
     required String title,
@@ -14,6 +39,7 @@ class ActivityNotifier extends StateNotifier<List<Activity>> {
     int priority = 1,
     String category = 'Kerja',
     String? note,
+    int? reminderMinutes,
   }) {
     final activity = Activity(
       id: _uuid.v4(),
@@ -23,9 +49,11 @@ class ActivityNotifier extends StateNotifier<List<Activity>> {
       priority: priority,
       category: category,
       note: note,
+      reminderMinutes: reminderMinutes,
       createdAt: DateTime.now(),
     );
     state = [...state, activity];
+    _save();
   }
 
   void toggleDone(String id) {
@@ -33,10 +61,12 @@ class ActivityNotifier extends StateNotifier<List<Activity>> {
       if (a.id == id) return a.copyWith(isDone: !a.isDone);
       return a;
     }).toList();
+    _save();
   }
 
   void delete(String id) {
     state = state.where((a) => a.id != id).toList();
+    _save();
   }
 
   void update({
@@ -47,6 +77,7 @@ class ActivityNotifier extends StateNotifier<List<Activity>> {
     int? priority,
     String? category,
     String? note,
+    int? reminderMinutes,
   }) {
     state = state.map((a) {
       if (a.id != id) return a;
@@ -57,8 +88,10 @@ class ActivityNotifier extends StateNotifier<List<Activity>> {
         priority: priority,
         category: category,
         note: note,
+        reminderMinutes: reminderMinutes,
       );
     }).toList();
+    _save();
   }
 
   List<Activity> todayActivities() {
