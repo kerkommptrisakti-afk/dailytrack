@@ -20,6 +20,15 @@ jobs:
           flutter-version: '3.19.0'
           channel: 'stable'
 
+      - name: Create Flutter project
+        run: |
+          flutter create --org id.dailytrack --project-name dailytrack tmp_project
+          cp -r tmp_project/android .
+          cp -r tmp_project/ios .
+          cp -r tmp_project/web .
+          cp -r tmp_project/test .
+          rm -rf tmp_project
+
       - name: Install dependencies
         run: flutter pub get
 
