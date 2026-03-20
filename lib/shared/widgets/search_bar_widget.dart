@@ -44,7 +44,7 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
           ),
           const SizedBox(width: 10),
           Expanded(
-            child: TextField(
+            child: TextFormField(
               controller: _controller,
               style: const TextStyle(
                 color: AppColors.textPrimary,
@@ -59,8 +59,12 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
                 border: InputBorder.none,
                 enabledBorder: InputBorder.none,
                 focusedBorder: InputBorder.none,
+                errorBorder: InputBorder.none,
+                disabledBorder: InputBorder.none,
                 isDense: true,
-                contentPadding: EdgeInsets.zero,
+                contentPadding: EdgeInsets.symmetric(vertical: 8),
+                fillColor: Colors.transparent,
+                filled: true,
               ),
               onChanged: (val) {
                 setState(() => _hasText = val.isNotEmpty);
