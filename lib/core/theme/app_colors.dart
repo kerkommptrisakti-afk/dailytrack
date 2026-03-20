@@ -4,9 +4,13 @@ abstract class AppColors {
   static const violet = Color(0xFF7C3AED);
   static const violetLight = Color(0xFFA78BFA);
   static const blue = Color(0xFF2563EB);
+  static const blueLight = Color(0xFF60A5FA);
   static const cyan = Color(0xFF06B6D4);
+  static const cyanLight = Color(0xFF22D3EE);
   static const amber = Color(0xFFF59E0B);
+  static const amberLight = Color(0xFFFCD34D);
   static const pink = Color(0xFFEC4899);
+  static const pinkLight = Color(0xFFF9A8D4);
   static const green = Color(0xFF4ADE80);
   static const red = Color(0xFFF87171);
   static const bg = Color(0xFF070714);
@@ -22,6 +26,12 @@ abstract class AppColors {
   static const priorityNormal = Color(0xFF60A5FA);
   static const priorityHigh = Color(0xFFF59E0B);
   static const priorityCritical = Color(0xFFF87171);
+
+  static const gradientFab = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [violet, blue],
+  );
 
   static Color forPriority(int level) {
     if (level == 0) return priorityLow;
