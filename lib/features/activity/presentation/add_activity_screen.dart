@@ -70,37 +70,49 @@ class _AddActivityScreenState extends ConsumerState<AddActivityScreen> {
   }
 
   void _save() {
-    if (_titleController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Judul kegiatan tidak boleh kosong'),
-        ),
-      );
-      return;
-    }
-
-    int? reminderMins = _selectedReminder;
-    if (_useCustomReminder) {
-      final custom = int.tryParse(_customReminderController.text);
-      if (custom != null && custom >= 1) {
-        reminderMins = custom;
-      }
-    }
-
-    HapticFeedback.mediumImpact();
-    ref.read(activityProvider.notifier).add(
-          title: _titleController.text.trim(),
-          date: _selectedDate,
-          time: _selectedTime,
-          priority: _selectedPriority,
-          category: _selectedCategory,
-          note: _noteController.text.trim().isEmpty
-              ? null
-              : _noteController.text.trim(),
-          reminderMinutes: reminderMins,
-        );
-    Navigator.pop(context);
+  final title = _titleController.text.trim();
+  
+  // Kalau title kosong setelah NLP, pakai raw text
+  if (title.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Judul kegiatan tidak boleh kosong'),
+        backgroundColor: Color(0xFFF87171),
+      ),
+    );
+    return;
   }
+
+  int? reminderMins = _selectedReminder;
+  if (_useCustomReminder) {
+    final custom = int.tryParse(_customReminderController.text);
+    if (custom != null && custom >= 1) {
+      reminderMins = custom;
+    }
+  }
+
+  HapticFeedback.mediumImpact();
+  ref.read(activityProvider.notifier).add(
+    title: title,
+    date: _selectedDate,
+    time: _selectedTime,
+    priority: _selectedPriority,
+    category: _selectedCategory,
+    note: _noteController.text.trim().isEmpty
+        ? null
+        : _noteController.text.trim(),
+    reminderMinutes: reminderMins,
+  );
+
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(
+      content: Text('Kegiatan berhasil disimpan!'),
+      backgroundColor: Color(0xFF4ADE80),
+    ),
+  );
+
+  Navigator.pop(context);
+}
 
   @override
   Widget build(BuildContext context) {
