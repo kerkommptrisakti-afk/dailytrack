@@ -83,9 +83,48 @@ jobs:
           mkdir -p android/app/src/main/kotlin/id/dailytrack/fresh
           cp android_src/MainActivity.kt android/app/src/main/kotlin/id/dailytrack/fresh/MainActivity.kt
 
-      - name: Add permissions to AndroidManifest
+      - name: Patch AndroidManifest
         run: |
-          sed -i 's/<manifest xmlns:android="http:\/\/schemas.android.com\/apk\/res\/android">/<manifest xmlns:android="http:\/\/schemas.android.com\/apk\/res\/android">\n    <uses-permission android:name="android.permission.RECORD_AUDIO"\/>\n    <uses-permission android:name="android.permission.INTERNET"\/>\n    <uses-permission android:name="android.permission.VIBRATE"\/>/' android/app/src/main/AndroidManifest.xml
+          cat > android/app/src/main/AndroidManifest.xml << 'MANIFEST'
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+              <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+              <uses-permission android:name="android.permission.VIBRATE"/>
+              <uses-permission android:name="android.permission.RECORD_AUDIO"/>
+              <uses-permission android:name="android.permission.INTERNET"/>
+              <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+              <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
+              <uses-permission android:name="android.permission.USE_EXACT_ALARM"/>
+              <uses-permission android:name="android.permission.WAKE_LOCK"/>
+              <application
+                  android:label="DailyTrack"
+                  android:name="${applicationName}"
+                  android:icon="@mipmap/ic_launcher">
+                  <activity
+                      android:name=".MainActivity"
+                      android:exported="true"
+                      android:launchMode="singleTop"
+                      android:taskAffinity=""
+                      android:theme="@style/LaunchTheme"
+                      android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+                      android:hardwareAccelerated="true"
+                      android:windowSoftInputMode="adjustResize">
+                      <meta-data
+                          android:name="io.flutter.embedding.android.NormalTheme"
+                          android:resource="@style/NormalTheme"/>
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN"/>
+                          <category android:name="android.intent.category.LAUNCHER"/>
+                      </intent-filter>
+                  </activity>
+                  <receiver
+                      android:name=".NotificationReceiver"
+                      android:exported="false"/>
+                  <meta-data
+                      android:name="flutterEmbedding"
+                      android:value="2"/>
+              </application>
+          </manifest>
+          MANIFEST
 
       - name: Install dependencies
         run: flutter pub get

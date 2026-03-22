@@ -55,13 +55,10 @@ class _ReminderOverlayState extends State<ReminderOverlay>
       animation: _controller,
       builder: (_, child) => FadeTransition(
         opacity: _fadeAnim,
-        child: ScaleTransition(
-          scale: _scaleAnim,
-          child: child,
-        ),
+        child: ScaleTransition(scale: _scaleAnim, child: child),
       ),
       child: Container(
-        margin: const EdgeInsets.all(20),
+        margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
           color: AppColors.bgCard,
@@ -81,38 +78,30 @@ class _ReminderOverlayState extends State<ReminderOverlay>
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Icon
             Container(
-              width: 64,
-              height: 64,
+              width: 56,
+              height: 56,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: const LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
                   colors: [AppColors.violet, AppColors.blue],
                 ),
                 boxShadow: [
                   BoxShadow(
                     color: AppColors.violet.withOpacity(0.4),
-                    blurRadius: 20,
-                    spreadRadius: 2,
+                    blurRadius: 16,
                   ),
                 ],
               ),
               child: const Icon(
                 Icons.notifications_active_rounded,
                 color: Colors.white,
-                size: 28,
+                size: 24,
               ),
             ),
-            const SizedBox(height: 16),
-            // Label
+            const SizedBox(height: 14),
             Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 12,
-                vertical: 4,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               decoration: BoxDecoration(
                 color: AppColors.violet.withOpacity(0.15),
                 borderRadius: BorderRadius.circular(100),
@@ -123,26 +112,26 @@ class _ReminderOverlayState extends State<ReminderOverlay>
               child: const Text(
                 'PENGINGAT KEGIATAN',
                 style: TextStyle(
-                  fontSize: 10,
+                  fontSize: 9,
                   fontWeight: FontWeight.w700,
                   color: AppColors.violetLight,
                   letterSpacing: 1.2,
                 ),
               ),
             ),
-            const SizedBox(height: 16),
-            // Title
+            const SizedBox(height: 14),
             Text(
               widget.activityTitle,
               style: const TextStyle(
                 color: AppColors.textPrimary,
-                fontSize: 20,
+                fontSize: 18,
                 fontWeight: FontWeight.w700,
               ),
               textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
-            const SizedBox(height: 8),
-            // Category
+            const SizedBox(height: 6),
             Text(
               widget.category,
               style: const TextStyle(
@@ -150,25 +139,23 @@ class _ReminderOverlayState extends State<ReminderOverlay>
                 fontSize: 13,
               ),
             ),
-            const SizedBox(height: 8),
-            // Time
+            const SizedBox(height: 4),
             Text(
               'Waktunya sekarang!',
               style: TextStyle(
-                color: AppColors.violet.withOpacity(0.8),
-                fontSize: 13,
+                color: AppColors.violetLight.withOpacity(0.8),
+                fontSize: 12,
                 fontWeight: FontWeight.w500,
               ),
             ),
-            const SizedBox(height: 28),
-            // Buttons
+            const SizedBox(height: 24),
             Row(
               children: [
                 Expanded(
                   child: GestureDetector(
                     onTap: widget.onDismiss,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      padding: const EdgeInsets.symmetric(vertical: 13),
                       decoration: BoxDecoration(
                         color: AppColors.glassBg,
                         borderRadius: BorderRadius.circular(14),
@@ -180,6 +167,7 @@ class _ReminderOverlayState extends State<ReminderOverlay>
                         style: TextStyle(
                           color: AppColors.textSecondary,
                           fontWeight: FontWeight.w600,
+                          fontSize: 14,
                         ),
                       ),
                     ),
@@ -191,7 +179,7 @@ class _ReminderOverlayState extends State<ReminderOverlay>
                   child: GestureDetector(
                     onTap: widget.onMarkDone,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      padding: const EdgeInsets.symmetric(vertical: 13),
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
                           colors: [AppColors.violet, AppColors.blue],
@@ -211,6 +199,7 @@ class _ReminderOverlayState extends State<ReminderOverlay>
                         style: TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.w700,
+                          fontSize: 14,
                         ),
                       ),
                     ),
@@ -225,7 +214,6 @@ class _ReminderOverlayState extends State<ReminderOverlay>
   }
 }
 
-/// Tampilkan reminder overlay di atas semua content
 void showReminderOverlay(
   BuildContext context, {
   required String activityTitle,
