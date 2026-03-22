@@ -20,24 +20,82 @@ jobs:
           flutter-version: '3.19.0'
           channel: 'stable'
 
-      - name: Create Flutter project
+      - name: Generate Flutter structure
         run: |
-          flutter create --org id.dailytrack --project-name dailytrack tmp_project
+          flutter create --org id.dailytrack --project-name fresh tmp_project
           cp -r tmp_project/android .
           cp -r tmp_project/ios .
           cp -r tmp_project/web .
-          cp -r tmp_project/test .
           rm -rf tmp_project
+
+      - name: Patch build.gradle
+        run: |
+          cat > android/app/build.gradle << 'GRADLE'
+          plugins {
+              id "com.android.application"
+              id "kotlin-android"
+              id "dev.flutter.flutter-gradle-plugin"
+          }
+
+          android {
+              namespace "id.dailytrack.fresh"
+              compileSdkVersion 34
+              ndkVersion "27.0.12077973"
+
+              compileOptions {
+                  coreLibraryDesugaringEnabled true
+                  sourceCompatibility JavaVersion.VERSION_1_8
+                  targetCompatibility JavaVersion.VERSION_1_8
+              }
+
+              kotlinOptions {
+                  jvmTarget = "1.8"
+              }
+
+              defaultConfig {
+                  applicationId "id.dailytrack.fresh"
+                  minSdkVersion 21
+                  targetSdkVersion 34
+                  versionCode 1
+                  versionName "3.0.0"
+              }
+
+              buildTypes {
+                  release {
+                      signingConfig signingConfigs.debug
+                      minifyEnabled false
+                      shrinkResources false
+                  }
+              }
+          }
+
+          flutter {
+              source "../.."
+          }
+
+          dependencies {
+              coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:1.2.2"
+          }
+          GRADLE
+
+      - name: Copy MainActivity
+        run: |
+          mkdir -p android/app/src/main/kotlin/id/dailytrack/fresh
+          cp android_src/MainActivity.kt android/app/src/main/kotlin/id/dailytrack/fresh/MainActivity.kt
+
+      - name: Add permissions to AndroidManifest
+        run: |
+          sed -i 's/<manifest xmlns:android="http:\/\/schemas.android.com\/apk\/res\/android">/<manifest xmlns:android="http:\/\/schemas.android.com\/apk\/res\/android">\n    <uses-permission android:name="android.permission.RECORD_AUDIO"\/>\n    <uses-permission android:name="android.permission.INTERNET"\/>\n    <uses-permission android:name="android.permission.VIBRATE"\/>/' android/app/src/main/AndroidManifest.xml
 
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Build APK
-        run: flutter build apk --debug
+      - name: Build Release APK
+        run: flutter build apk --release
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: dailytrack-apk
-          path: build/app/outputs/flutter-apk/app-debug.apk
+          name: dailytrack-release
+          path: build/app/outputs/flutter-apk/app-release.apk
           retention-days: 7
