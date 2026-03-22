@@ -131,15 +131,21 @@ class _AddActivityScreenState extends ConsumerState<AddActivityScreen> {
             ),
             const SizedBox(height: 12),
             VoiceInputWidget(
-              onResult: (text) {
-                setState(() {
-                  _titleController.text = text;
-                  _titleController.selection = TextSelection.fromPosition(
-                    TextPosition(offset: text.length),
-                  );
-                });
-              },
-            ),
+             onResult: (text) {
+             setState(() {
+             _titleController.text = text;
+             _titleController.selection = TextSelection.fromPosition(
+        TextPosition(offset: text.length),
+      );
+    });
+  },
+  onDateParsed: (date) {
+    setState(() => _selectedDate = date);
+  },
+  onTimeParsed: (time) {
+    setState(() => _selectedTime = time);
+  },
+),
             const SizedBox(height: 20),
             Row(
               children: [

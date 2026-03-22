@@ -2,13 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/services/speech_service.dart';
+import '../../core/services/nlp_parser.dart';
 
 class VoiceInputWidget extends StatelessWidget {
   final ValueChanged<String> onResult;
+  final ValueChanged<DateTime>? onDateParsed;
+  final ValueChanged<DateTime>? onTimeParsed;
 
   const VoiceInputWidget({
     super.key,
     required this.onResult,
+    this.onDateParsed,
+    this.onTimeParsed,
   });
 
   @override
@@ -20,7 +25,11 @@ class VoiceInputWidget extends StatelessWidget {
           context: context,
           backgroundColor: Colors.transparent,
           isScrollControlled: true,
-          builder: (_) => _VoiceOverlay(onResult: onResult),
+          builder: (_) => _VoiceOverlay(
+            onResult: onResult,
+            onDateParsed: onDateParsed,
+            onTimeParsed: onTimeParsed,
+          ),
         );
       },
       child: Container(
@@ -64,7 +73,7 @@ class VoiceInputWidget extends StatelessWidget {
                   ),
                   SizedBox(height: 4),
                   Text(
-                    'Tap untuk input judul dengan suara',
+                    'Contoh: "Besok rapat jam 9 pagi"',
                     style: TextStyle(
                       fontSize: 12,
                       color: AppColors.textSecondary,
@@ -87,8 +96,14 @@ class VoiceInputWidget extends StatelessWidget {
 
 class _VoiceOverlay extends StatefulWidget {
   final ValueChanged<String> onResult;
+  final ValueChanged<DateTime>? onDateParsed;
+  final ValueChanged<DateTime>? onTimeParsed;
 
-  const _VoiceOverlay({required this.onResult});
+  const _VoiceOverlay({
+    required this.onResult,
+    this.onDateParsed,
+    this.onTimeParsed,
+  });
 
   @override
   State<_VoiceOverlay> createState() => _VoiceOverlayState();
@@ -100,7 +115,8 @@ class _VoiceOverlayState extends State<_VoiceOverlay>
   late Animation<double> _pulseAnim;
   bool _isListening = false;
   bool _isDone = false;
-  String _resultText = '';
+  String _rawText = '';
+  ParsedActivity? _parsed;
   String _statusText = 'Tap tombol mic untuk mulai';
 
   @override
@@ -126,7 +142,8 @@ class _VoiceOverlayState extends State<_VoiceOverlay>
     setState(() {
       _isListening = true;
       _isDone = false;
-      _resultText = '';
+      _rawText = '';
+      _parsed = null;
       _statusText = 'Mendengarkan...';
     });
     _pulseController.repeat(reverse: true);
@@ -138,24 +155,27 @@ class _VoiceOverlayState extends State<_VoiceOverlay>
 
     if (result.isNotEmpty) {
       HapticFeedback.mediumImpact();
+      final parsed = NlpParser.parse(result);
       setState(() {
         _isListening = false;
         _isDone = true;
-        _resultText = result;
+        _rawText = result;
+        _parsed = parsed;
         _statusText = 'Hasil transkripsi:';
       });
     } else {
       setState(() {
         _isListening = false;
-        _isDone = false;
         _statusText = 'Tidak terdengar, coba lagi';
       });
     }
   }
 
   void _confirm() {
-    if (_resultText.isNotEmpty) {
-      widget.onResult(_resultText);
+    if (_parsed != null) {
+      widget.onResult(_parsed!.title);
+      if (_parsed!.date != null) widget.onDateParsed?.call(_parsed!.date!);
+      if (_parsed!.time != null) widget.onTimeParsed?.call(_parsed!.time!);
       Navigator.pop(context);
     }
   }
@@ -163,7 +183,8 @@ class _VoiceOverlayState extends State<_VoiceOverlay>
   void _retry() {
     setState(() {
       _isDone = false;
-      _resultText = '';
+      _rawText = '';
+      _parsed = null;
       _statusText = 'Tap tombol mic untuk mulai';
     });
   }
@@ -181,7 +202,6 @@ class _VoiceOverlayState extends State<_VoiceOverlay>
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Handle bar
           Container(
             width: 40,
             height: 4,
@@ -191,7 +211,6 @@ class _VoiceOverlayState extends State<_VoiceOverlay>
             ),
           ),
           const SizedBox(height: 24),
-          // Title
           const Text(
             'Input Suara',
             style: TextStyle(
@@ -200,7 +219,7 @@ class _VoiceOverlayState extends State<_VoiceOverlay>
               fontWeight: FontWeight.w700,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 4),
           Text(
             _statusText,
             style: const TextStyle(
@@ -209,8 +228,16 @@ class _VoiceOverlayState extends State<_VoiceOverlay>
             ),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 32),
-          // Mic button
+          const SizedBox(height: 8),
+          const Text(
+            'Contoh: "Besok rapat jam 9 pagi"',
+            style: TextStyle(
+              color: AppColors.textTertiary,
+              fontSize: 11,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+          const SizedBox(height: 28),
           if (!_isDone) ...[
             GestureDetector(
               onTap: _isListening ? null : _startListening,
@@ -253,8 +280,8 @@ class _VoiceOverlayState extends State<_VoiceOverlay>
                 ),
               ),
             ),
-            const SizedBox(height: 16),
-            if (_isListening)
+            if (_isListening) ...[
+              const SizedBox(height: 20),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: List.generate(5, (i) {
@@ -273,25 +300,91 @@ class _VoiceOverlayState extends State<_VoiceOverlay>
                   );
                 }),
               ),
+            ],
           ],
-          // Result
-          if (_isDone) ...[
+          if (_isDone && _parsed != null) ...[
+            // Raw text
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: AppColors.glassBg,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: AppColors.violetLight.withOpacity(0.3),
+                ),
+              ),
+              child: Text(
+                '"$_rawText"',
+                style: const TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 13,
+                  fontStyle: FontStyle.italic,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+            const SizedBox(height: 12),
+            // Parsed result
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: AppColors.glassBg,
+                color: AppColors.violet.withOpacity(0.08),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.violetLight.withOpacity(0.3)),
-              ),
-              child: Text(
-                '"$_resultText"',
-                style: const TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
+                border: Border.all(
+                  color: AppColors.violetLight.withOpacity(0.25),
                 ),
-                textAlign: TextAlign.center,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'HASIL PARSING',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textTertiary,
+                      letterSpacing: 1.0,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  _ParsedRow(
+                    icon: Icons.title_rounded,
+                    label: 'Judul',
+                    value: _parsed!.title,
+                    color: AppColors.violetLight,
+                  ),
+                  if (_parsed!.date != null) ...[
+                    const SizedBox(height: 8),
+                    _ParsedRow(
+                      icon: Icons.calendar_today_rounded,
+                      label: 'Tanggal',
+                      value: '${_parsed!.date!.day}/${_parsed!.date!.month}/${_parsed!.date!.year}',
+                      color: AppColors.cyanLight,
+                    ),
+                  ],
+                  if (_parsed!.time != null) ...[
+                    const SizedBox(height: 8),
+                    _ParsedRow(
+                      icon: Icons.access_time_rounded,
+                      label: 'Waktu',
+                      value: '${_parsed!.time!.hour.toString().padLeft(2, '0')}:${_parsed!.time!.minute.toString().padLeft(2, '0')}',
+                      color: AppColors.amberLight,
+                    ),
+                  ],
+                  if (_parsed!.date == null && _parsed!.time == null) ...[
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Tanggal & waktu tidak terdeteksi — isi manual',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: AppColors.textTertiary,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
             const SizedBox(height: 20),
@@ -339,7 +432,7 @@ class _VoiceOverlayState extends State<_VoiceOverlay>
                         ],
                       ),
                       child: const Text(
-                        'Gunakan Teks Ini',
+                        'Gunakan Ini',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           color: Colors.white,
@@ -355,6 +448,47 @@ class _VoiceOverlayState extends State<_VoiceOverlay>
           const SizedBox(height: 8),
         ],
       ),
+    );
+  }
+}
+
+class _ParsedRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color color;
+
+  const _ParsedRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, size: 14, color: color),
+        const SizedBox(width: 8),
+        Text(
+          '$label: ',
+          style: const TextStyle(
+            fontSize: 12,
+            color: AppColors.textTertiary,
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: color,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
