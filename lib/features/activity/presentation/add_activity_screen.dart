@@ -6,6 +6,7 @@ import '../../../core/constants/app_constants.dart';
 import '../../../shared/widgets/custom_time_picker.dart';
 import '../../../shared/widgets/custom_date_picker.dart';
 import '../data/models/activity_provider.dart';
+import '../../../shared/widgets/voice_input_widget.dart';
 
 class AddActivityScreen extends ConsumerStatefulWidget {
   const AddActivityScreen({super.key});
@@ -127,6 +128,17 @@ class _AddActivityScreenState extends ConsumerState<AddActivityScreen> {
                 hintText: 'Masukkan judul kegiatan...',
               ),
               autofocus: true,
+            ),
+            const SizedBox(height: 12),
+            VoiceInputWidget(
+              onResult: (text) {
+                setState(() {
+                  _titleController.text = text;
+                  _titleController.selection = TextSelection.fromPosition(
+                    TextPosition(offset: text.length),
+                  );
+                });
+              },
             ),
             const SizedBox(height: 20),
             Row(
