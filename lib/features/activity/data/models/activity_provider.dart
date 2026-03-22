@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 import 'activity_model.dart';
+import '../../../../core/services/notification_service.dart';
 
 const _uuid = Uuid();
 const _prefKey = 'activities';
@@ -33,28 +34,42 @@ class ActivityNotifier extends StateNotifier<List<Activity>> {
   }
 
   void add({
-    required String title,
-    required DateTime date,
-    DateTime? time,
-    int priority = 1,
-    String category = 'Kerja',
-    String? note,
-    int? reminderMinutes,
-  }) {
-    final activity = Activity(
-      id: _uuid.v4(),
-      title: title,
-      date: date,
-      time: time,
-      priority: priority,
-      category: category,
-      note: note,
-      reminderMinutes: reminderMinutes,
-      createdAt: DateTime.now(),
+  required String title,
+  required DateTime date,
+  DateTime? time,
+  int priority = 1,
+  String category = 'Kerja',
+  String? note,
+  int? reminderMinutes,
+}) {
+  final activity = Activity(
+    id: _uuid.v4(),
+    title: title,
+    date: DateTime(date.year, date.month, date.day),
+    time: time,
+    priority: priority,
+    category: category,
+    note: note,
+    reminderMinutes: reminderMinutes,
+    createdAt: DateTime.now(),
+  );
+  state = [...state, activity];
+  _save();
+  
+  // Auto schedule notifikasi
+  if (time != null) {
+    final actTime = DateTime(
+      date.year, date.month, date.day,
+      time.hour, time.minute,
     );
-    state = [...state, activity];
-    _save();
+    NotificationService.scheduleForActivity(
+      activityId: activity.id,
+      title: title,
+      activityTime: actTime,
+      reminderMinutes: reminderMinutes,
+    );
   }
+}
 
   void toggleDone(String id) {
     state = state.map((a) {
