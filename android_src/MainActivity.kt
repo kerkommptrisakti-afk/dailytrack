@@ -42,7 +42,6 @@ class MainActivity : FlutterActivity() {
             )
             putExtra(RecognizerIntent.EXTRA_LANGUAGE, "id-ID")
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, "id-ID")
-            putExtra(RecognizerIntent.EXTRA_ONLY_RETURN_LANGUAGE_MODEL, "id-ID")
             putExtra(RecognizerIntent.EXTRA_PROMPT, "Bicara sekarang...")
             putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
         }
