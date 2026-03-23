@@ -10,7 +10,9 @@ import android.content.Context
 import android.content.Intent
 import android.media.AudioAttributes
 import android.media.RingtoneManager
+import android.net.Uri
 import android.os.Build
+import android.provider.Settings
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.widget.RemoteViews
@@ -28,6 +30,7 @@ class MainActivity : FlutterActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
 
+        // ── Speech Channel ────────────────────────────────────────
         MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
             SPEECH_CHANNEL
@@ -44,6 +47,7 @@ class MainActivity : FlutterActivity() {
             }
         }
 
+        // ── Notification Channel ──────────────────────────────────
         MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
             NOTIF_CHANNEL
@@ -66,30 +70,29 @@ class MainActivity : FlutterActivity() {
                 "createChannel" -> {
                     createNotificationChannel()
                     result.success(true)
-                    requestBatteryOptimization" -> {
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-        val pm = getSystemService(android.os.PowerManager::class.java)
-        if (!pm.isIgnoringBatteryOptimizations(packageName)) {
-            val intent = Intent(
-                android.provider.Settings
-                    .ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS
-            ).apply {
-                data = android.net.Uri.parse("package:$packageName")
-            }
-            startActivity(intent)
-        }
-    }
-    result.success(true)
-}
-"requestNotificationPermission" -> {
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        requestPermissions(
-            arrayOf(android.Manifest.permission.POST_NOTIFICATIONS),
-            1001
-        )
-    }
-    result.success(true)
-}
+                }
+                "requestBatteryOptimization" -> {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                        val pm = getSystemService(android.os.PowerManager::class.java)
+                        if (!pm.isIgnoringBatteryOptimizations(packageName)) {
+                            val intent = Intent(
+                                Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS
+                            ).apply {
+                                data = Uri.parse("package:$packageName")
+                            }
+                            startActivity(intent)
+                        }
+                    }
+                    result.success(true)
+                }
+                "requestNotificationPermission" -> {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        requestPermissions(
+                            arrayOf(android.Manifest.permission.POST_NOTIFICATIONS),
+                            1001
+                        )
+                    }
+                    result.success(true)
                 }
                 else -> result.notImplemented()
             }
@@ -123,28 +126,28 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun scheduleNotification(
-    id: Int, title: String, body: String,
-    triggerMs: Long, activityId: String
-) {
-    val intent = Intent(this, NotificationReceiver::class.java).apply {
-        putExtra("id", id)
-        putExtra("title", title)
-        putExtra("body", body)
-        putExtra("activityId", activityId)
+        id: Int, title: String, body: String,
+        triggerMs: Long, activityId: String
+    ) {
+        val intent = Intent(this, NotificationReceiver::class.java).apply {
+            putExtra("id", id)
+            putExtra("title", title)
+            putExtra("body", body)
+            putExtra("activityId", activityId)
+        }
+        val pendingIntent = PendingIntent.getBroadcast(
+            this, id, intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        val launchIntent = packageManager.getLaunchIntentForPackage(packageName)
+        val showIntent = PendingIntent.getActivity(
+            this, 0, launchIntent,
+            PendingIntent.FLAG_IMMUTABLE
+        )
+        val alarm = getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        val alarmInfo = AlarmManager.AlarmClockInfo(triggerMs, showIntent)
+        alarm.setAlarmClock(alarmInfo, pendingIntent)
     }
-    val pendingIntent = PendingIntent.getBroadcast(
-        this, id, intent,
-        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-    )
-    val launchIntent = packageManager.getLaunchIntentForPackage(packageName)
-    val showIntent = PendingIntent.getActivity(
-        this, 0, launchIntent,
-        PendingIntent.FLAG_IMMUTABLE
-    )
-    val alarm = getSystemService(Context.ALARM_SERVICE) as AlarmManager
-    val alarmInfo = AlarmManager.AlarmClockInfo(triggerMs, showIntent)
-    alarm.setAlarmClock(alarmInfo, pendingIntent)
-}
 
     private fun cancelNotification(id: Int) {
         val intent = Intent(this, NotificationReceiver::class.java)
@@ -223,7 +226,6 @@ class NotificationReceiver : BroadcastReceiver() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        // Custom RemoteViews
         val customView = RemoteViews(
             context.packageName,
             R.layout.notification_custom
