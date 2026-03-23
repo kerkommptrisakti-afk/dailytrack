@@ -13,8 +13,8 @@ import android.media.RingtoneManager
 import android.os.Build
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
+import android.widget.RemoteViews
 import androidx.core.app.NotificationCompat
-import androidx.core.app.NotificationManagerCompat
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -76,9 +76,7 @@ class MainActivity : FlutterActivity() {
 
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val soundUri = RingtoneManager.getDefaultUri(
-                RingtoneManager.TYPE_ALARM
-            )
+            val soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
             val audioAttr = AudioAttributes.Builder()
                 .setUsage(AudioAttributes.USAGE_ALARM)
                 .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
@@ -172,7 +170,6 @@ class NotificationReceiver : BroadcastReceiver() {
         val id = intent.getIntExtra("id", 0)
         val title = intent.getStringExtra("title") ?: "DailyTrack"
         val body = intent.getStringExtra("body") ?: "Kegiatan akan segera dimulai"
-
         val soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
 
         val launchIntent = context.packageManager
@@ -182,7 +179,6 @@ class NotificationReceiver : BroadcastReceiver() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        // Action: Selesai
         val doneIntent = Intent(context, ActionReceiver::class.java).apply {
             action = "id.dailytrack.fresh.ACTION_DONE"
             putExtra("notifId", id)
@@ -192,7 +188,6 @@ class NotificationReceiver : BroadcastReceiver() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        // Action: Tunda
         val snoozeIntent = Intent(context, ActionReceiver::class.java).apply {
             action = "id.dailytrack.fresh.ACTION_SNOOZE"
             putExtra("notifId", id)
@@ -204,11 +199,22 @@ class NotificationReceiver : BroadcastReceiver() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        // Custom RemoteViews
+        val customView = RemoteViews(
+            context.packageName,
+            R.layout.notification_custom
+        ).apply {
+            setTextViewText(R.id.notif_title, title)
+            setTextViewText(R.id.notif_body, body)
+            setOnClickPendingIntent(R.id.notif_action_done, donePendingIntent)
+            setOnClickPendingIntent(R.id.notif_action_snooze, snoozePendingIntent)
+        }
+
         val notification = NotificationCompat.Builder(context, "dailytrack_reminders")
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
-            .setContentTitle(title)
-            .setContentText(body)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(body))
+            .setCustomContentView(customView)
+            .setCustomBigContentView(customView)
+            .setStyle(NotificationCompat.DecoratedCustomViewStyle())
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setAutoCancel(true)
@@ -216,16 +222,6 @@ class NotificationReceiver : BroadcastReceiver() {
             .setSound(soundUri)
             .setVibrate(longArrayOf(0, 300, 200, 300, 200, 300))
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-            .addAction(
-                android.R.drawable.ic_menu_agenda,
-                "Nanti",
-                snoozePendingIntent
-            )
-            .addAction(
-                android.R.drawable.ic_menu_send,
-                "Selesai",
-                donePendingIntent
-            )
             .build()
 
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE)
@@ -251,7 +247,7 @@ class ActionReceiver : BroadcastReceiver() {
                 val snoozeIntent = Intent(context, NotificationReceiver::class.java).apply {
                     putExtra("id", notifId)
                     putExtra("title", title)
-                    putExtra("body", "Ditunda: $body")
+                    putExtra("body", "Ditunda 10 menit: $body")
                 }
                 val pendingIntent = PendingIntent.getBroadcast(
                     context, notifId + 3000, snoozeIntent,

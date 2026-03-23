@@ -78,10 +78,12 @@ jobs:
           }
           GRADLE
 
-      - name: Copy MainActivity
+      - name: Copy native files
         run: |
           mkdir -p android/app/src/main/kotlin/id/dailytrack/fresh
+          mkdir -p android/app/src/main/res/layout
           cp android_src/MainActivity.kt android/app/src/main/kotlin/id/dailytrack/fresh/MainActivity.kt
+          cp android_src/layout/notification_custom.xml android/app/src/main/res/layout/notification_custom.xml
 
       - name: Patch AndroidManifest
         run: |
