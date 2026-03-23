@@ -30,7 +30,6 @@ class MainActivity : FlutterActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
 
-        // ── Speech Channel ────────────────────────────────────────
         MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
             SPEECH_CHANNEL
@@ -47,7 +46,6 @@ class MainActivity : FlutterActivity() {
             }
         }
 
-        // ── Notification Channel ──────────────────────────────────
         MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
             NOTIF_CHANNEL
@@ -80,17 +78,19 @@ class MainActivity : FlutterActivity() {
                             ).apply {
                                 data = Uri.parse("package:$packageName")
                             }
-                            startActivity(intent)
+                            runOnUiThread { startActivity(intent) }
                         }
                     }
                     result.success(true)
                 }
                 "requestNotificationPermission" -> {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        requestPermissions(
-                            arrayOf(android.Manifest.permission.POST_NOTIFICATIONS),
-                            1001
-                        )
+                        runOnUiThread {
+                            requestPermissions(
+                                arrayOf(android.Manifest.permission.POST_NOTIFICATIONS),
+                                1001
+                            )
+                        }
                     }
                     result.success(true)
                 }
