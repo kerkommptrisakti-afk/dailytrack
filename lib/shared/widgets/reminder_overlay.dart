@@ -27,7 +27,6 @@ class _ReminderOverlayState extends State<ReminderOverlay>
   late AnimationController _enterCtrl;
   late AnimationController _pulseCtrl;
   late AnimationController _glowCtrl;
-
   late Animation<double> _scaleAnim;
   late Animation<double> _fadeAnim;
   late Animation<double> _slideAnim;
@@ -104,7 +103,7 @@ class _ReminderOverlayState extends State<ReminderOverlay>
                 animation: _glowCtrl,
                 builder: (_, child) => Container(
                   decoration: BoxDecoration(
-                    color: AppColors.glassBg,
+                    color: const Color(0xFF0D0D26).withOpacity(0.92),
                     borderRadius: BorderRadius.circular(32),
                     border: Border.all(
                       color: AppColors.violetLight.withOpacity(
@@ -119,10 +118,6 @@ class _ReminderOverlayState extends State<ReminderOverlay>
                         ),
                         blurRadius: 60,
                         spreadRadius: 10,
-                      ),
-                      BoxShadow(
-                        color: AppColors.blue.withOpacity(0.15),
-                        blurRadius: 40,
                       ),
                     ],
                   ),
@@ -139,7 +134,7 @@ class _ReminderOverlayState extends State<ReminderOverlay>
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                             colors: [
-                              Colors.white.withOpacity(0.08),
+                              Colors.white.withOpacity(0.06),
                               Colors.transparent,
                             ],
                             stops: const [0.0, 0.5],
@@ -147,13 +142,12 @@ class _ReminderOverlayState extends State<ReminderOverlay>
                         ),
                       ),
                     ),
-                    // Content
                     Padding(
                       padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          // Pulsing bell
+                          // Bell icon
                           AnimatedBuilder(
                             animation: _pulseAnim,
                             builder: (_, child) => Transform.scale(
@@ -219,6 +213,7 @@ class _ReminderOverlayState extends State<ReminderOverlay>
                                 fontWeight: FontWeight.w800,
                                 color: AppColors.violetLight,
                                 letterSpacing: 1.6,
+                                decoration: TextDecoration.none,
                               ),
                             ),
                           ),
@@ -229,16 +224,17 @@ class _ReminderOverlayState extends State<ReminderOverlay>
                             style: GoogleFonts.syne(
                               fontSize: 22,
                               fontWeight: FontWeight.w800,
-                              color: AppColors.textPrimary,
+                              color: Colors.white,
                               letterSpacing: -0.5,
                               height: 1.2,
+                              decoration: TextDecoration.none,
                             ),
                             textAlign: TextAlign.center,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                           ),
                           const SizedBox(height: 12),
-                          // Category + time row
+                          // Category + time
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
@@ -257,6 +253,7 @@ class _ReminderOverlayState extends State<ReminderOverlay>
                                   color: AppColors.textSecondary,
                                   fontSize: 13,
                                   fontWeight: FontWeight.w500,
+                                  decoration: TextDecoration.none,
                                 ),
                               ),
                               const SizedBox(width: 10),
@@ -269,18 +266,29 @@ class _ReminderOverlayState extends State<ReminderOverlay>
                                 ),
                               ),
                               const SizedBox(width: 10),
-                              Text(
-                                'Sekarang ⚡',
-                                style: GoogleFonts.dmSans(
-                                  color: AppColors.violetLight,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                ),
+                              Row(
+                                children: [
+                                  const Icon(
+                                    Icons.bolt_rounded,
+                                    color: AppColors.violetLight,
+                                    size: 14,
+                                  ),
+                                  const SizedBox(width: 2),
+                                  Text(
+                                    'Sekarang',
+                                    style: GoogleFonts.dmSans(
+                                      color: AppColors.violetLight,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      decoration: TextDecoration.none,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
                           const SizedBox(height: 28),
-                          // Divider
+                          // Divider gradient
                           Container(
                             height: 1,
                             decoration: BoxDecoration(
@@ -314,17 +322,30 @@ class _ReminderOverlayState extends State<ReminderOverlay>
                                     ),
                                     child: Column(
                                       children: [
-                                        const Text(
-                                          '⏰',
-                                          style: TextStyle(fontSize: 20),
+                                        Container(
+                                          width: 32,
+                                          height: 32,
+                                          decoration: BoxDecoration(
+                                            color: AppColors.glassBg,
+                                            shape: BoxShape.circle,
+                                            border: Border.all(
+                                              color: AppColors.glassBorderSm,
+                                            ),
+                                          ),
+                                          child: const Icon(
+                                            Icons.schedule_rounded,
+                                            color: AppColors.textSecondary,
+                                            size: 16,
+                                          ),
                                         ),
-                                        const SizedBox(height: 5),
+                                        const SizedBox(height: 6),
                                         Text(
                                           'Nanti',
                                           style: GoogleFonts.dmSans(
                                             color: AppColors.textSecondary,
                                             fontSize: 13,
                                             fontWeight: FontWeight.w600,
+                                            decoration: TextDecoration.none,
                                           ),
                                         ),
                                       ],
@@ -362,17 +383,27 @@ class _ReminderOverlayState extends State<ReminderOverlay>
                                     ),
                                     child: Column(
                                       children: [
-                                        const Text(
-                                          '✅',
-                                          style: TextStyle(fontSize: 20),
+                                        Container(
+                                          width: 32,
+                                          height: 32,
+                                          decoration: BoxDecoration(
+                                            color: Colors.white.withOpacity(0.2),
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: const Icon(
+                                            Icons.check_rounded,
+                                            color: Colors.white,
+                                            size: 18,
+                                          ),
                                         ),
-                                        const SizedBox(height: 5),
+                                        const SizedBox(height: 6),
                                         Text(
                                           'Tandai Selesai',
                                           style: GoogleFonts.dmSans(
                                             color: Colors.white,
                                             fontSize: 13,
                                             fontWeight: FontWeight.w700,
+                                            decoration: TextDecoration.none,
                                           ),
                                         ),
                                       ],

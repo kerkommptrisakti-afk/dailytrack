@@ -8,10 +8,13 @@ import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.media.AudioAttributes
+import android.media.RingtoneManager
 import android.os.Build
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -25,7 +28,6 @@ class MainActivity : FlutterActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
 
-        // Speech channel
         MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
             SPEECH_CHANNEL
@@ -42,7 +44,6 @@ class MainActivity : FlutterActivity() {
             }
         }
 
-        // Notification channel
         MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
             NOTIF_CHANNEL
@@ -53,7 +54,8 @@ class MainActivity : FlutterActivity() {
                     val title = call.argument<String>("title") ?: ""
                     val body = call.argument<String>("body") ?: ""
                     val triggerMs = call.argument<Long>("triggerMs") ?: 0L
-                    scheduleNotification(id, title, body, triggerMs)
+                    val activityId = call.argument<String>("activityId") ?: ""
+                    scheduleNotification(id, title, body, triggerMs, activityId)
                     result.success(true)
                 }
                 "cancelNotification" -> {
@@ -74,13 +76,24 @@ class MainActivity : FlutterActivity() {
 
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val soundUri = RingtoneManager.getDefaultUri(
+                RingtoneManager.TYPE_ALARM
+            )
+            val audioAttr = AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_ALARM)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build()
             val channel = NotificationChannel(
                 "dailytrack_reminders",
                 "DailyTrack Reminders",
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                description = "Reminder untuk kegiatan DailyTrack"
+                description = "Reminder kegiatan DailyTrack"
                 enableVibration(true)
+                vibrationPattern = longArrayOf(0, 300, 200, 300, 200, 300)
+                setSound(soundUri, audioAttr)
+                setShowBadge(true)
+                lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
             }
             val manager = getSystemService(NotificationManager::class.java)
             manager.createNotificationChannel(channel)
@@ -88,15 +101,14 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun scheduleNotification(
-        id: Int,
-        title: String,
-        body: String,
-        triggerMs: Long
+        id: Int, title: String, body: String,
+        triggerMs: Long, activityId: String
     ) {
         val intent = Intent(this, NotificationReceiver::class.java).apply {
             putExtra("id", id)
             putExtra("title", title)
             putExtra("body", body)
+            putExtra("activityId", activityId)
         }
         val pendingIntent = PendingIntent.getBroadcast(
             this, id, intent,
@@ -120,6 +132,8 @@ class MainActivity : FlutterActivity() {
         )
         val alarm = getSystemService(Context.ALARM_SERVICE) as AlarmManager
         alarm.cancel(pendingIntent)
+        val manager = getSystemService(NotificationManager::class.java)
+        manager.cancel(id)
     }
 
     private fun startSpeechRecognition() {
@@ -159,25 +173,100 @@ class NotificationReceiver : BroadcastReceiver() {
         val title = intent.getStringExtra("title") ?: "DailyTrack"
         val body = intent.getStringExtra("body") ?: "Kegiatan akan segera dimulai"
 
-        val notifIntent = context.packageManager
+        val soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+
+        val launchIntent = context.packageManager
             .getLaunchIntentForPackage(context.packageName)
-        val pendingIntent = PendingIntent.getActivity(
-            context, 0, notifIntent,
+        val contentPendingIntent = PendingIntent.getActivity(
+            context, 0, launchIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        // Action: Selesai
+        val doneIntent = Intent(context, ActionReceiver::class.java).apply {
+            action = "id.dailytrack.fresh.ACTION_DONE"
+            putExtra("notifId", id)
+        }
+        val donePendingIntent = PendingIntent.getBroadcast(
+            context, id + 1000, doneIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        // Action: Tunda
+        val snoozeIntent = Intent(context, ActionReceiver::class.java).apply {
+            action = "id.dailytrack.fresh.ACTION_SNOOZE"
+            putExtra("notifId", id)
+            putExtra("title", title)
+            putExtra("body", body)
+        }
+        val snoozePendingIntent = PendingIntent.getBroadcast(
+            context, id + 2000, snoozeIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
         val notification = NotificationCompat.Builder(context, "dailytrack_reminders")
-            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
             .setContentTitle(title)
             .setContentText(body)
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(body))
+            .setPriority(NotificationCompat.PRIORITY_MAX)
+            .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setAutoCancel(true)
-            .setContentIntent(pendingIntent)
-            .setVibrate(longArrayOf(0, 250, 250, 250))
+            .setContentIntent(contentPendingIntent)
+            .setSound(soundUri)
+            .setVibrate(longArrayOf(0, 300, 200, 300, 200, 300))
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .addAction(
+                android.R.drawable.ic_menu_agenda,
+                "Nanti",
+                snoozePendingIntent
+            )
+            .addAction(
+                android.R.drawable.ic_menu_send,
+                "Selesai",
+                donePendingIntent
+            )
             .build()
 
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE)
                 as NotificationManager
         manager.notify(id, notification)
+    }
+}
+
+class ActionReceiver : BroadcastReceiver() {
+    override fun onReceive(context: Context, intent: Intent) {
+        val notifId = intent.getIntExtra("notifId", 0)
+        val manager = context.getSystemService(Context.NOTIFICATION_SERVICE)
+                as NotificationManager
+
+        when (intent.action) {
+            "id.dailytrack.fresh.ACTION_DONE" -> {
+                manager.cancel(notifId)
+            }
+            "id.dailytrack.fresh.ACTION_SNOOZE" -> {
+                manager.cancel(notifId)
+                val title = intent.getStringExtra("title") ?: "DailyTrack"
+                val body = intent.getStringExtra("body") ?: ""
+                val snoozeIntent = Intent(context, NotificationReceiver::class.java).apply {
+                    putExtra("id", notifId)
+                    putExtra("title", title)
+                    putExtra("body", "Ditunda: $body")
+                }
+                val pendingIntent = PendingIntent.getBroadcast(
+                    context, notifId + 3000, snoozeIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
+                val alarm = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+                val triggerMs = System.currentTimeMillis() + 10 * 60 * 1000L
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    alarm.setExactAndAllowWhileIdle(
+                        AlarmManager.RTC_WAKEUP, triggerMs, pendingIntent
+                    )
+                } else {
+                    alarm.setExact(AlarmManager.RTC_WAKEUP, triggerMs, pendingIntent)
+                }
+            }
+        }
     }
 }

@@ -119,6 +119,14 @@ jobs:
                   <receiver
                       android:name=".NotificationReceiver"
                       android:exported="false"/>
+                  <receiver
+                      android:name=".ActionReceiver"
+                      android:exported="false">
+                      <intent-filter>
+                          <action android:name="id.dailytrack.fresh.ACTION_DONE"/>
+                          <action android:name="id.dailytrack.fresh.ACTION_SNOOZE"/>
+                      </intent-filter>
+                  </receiver>
                   <meta-data
                       android:name="flutterEmbedding"
                       android:value="2"/>
