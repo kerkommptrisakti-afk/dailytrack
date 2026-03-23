@@ -15,7 +15,6 @@ import android.os.Build
 import android.provider.Settings
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
-import android.widget.RemoteViews
 import androidx.core.app.NotificationCompat
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -229,22 +228,11 @@ class NotificationReceiver : BroadcastReceiver() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        // Custom layout
-        val customView = RemoteViews(
-            context.packageName,
-            R.layout.notification_custom
-        ).apply {
-            setTextViewText(R.id.notif_title, title)
-            setTextViewText(R.id.notif_body, body)
-            setOnClickPendingIntent(R.id.notif_action_done, donePendingIntent)
-            setOnClickPendingIntent(R.id.notif_action_snooze, snoozePendingIntent)
-        }
-
         val notification = NotificationCompat.Builder(context, "dailytrack_reminders")
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
-            .setCustomContentView(customView)
-            .setCustomBigContentView(customView)
-            .setStyle(NotificationCompat.DecoratedCustomViewStyle())
+            .setContentTitle(title)
+            .setContentText(body)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(body))
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setAutoCancel(true)
@@ -252,6 +240,16 @@ class NotificationReceiver : BroadcastReceiver() {
             .setSound(soundUri)
             .setVibrate(longArrayOf(0, 300, 200, 300, 200, 300))
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .addAction(
+                android.R.drawable.ic_menu_agenda,
+                "Nanti",
+                snoozePendingIntent
+            )
+            .addAction(
+                android.R.drawable.ic_menu_send,
+                "Selesai",
+                donePendingIntent
+            )
             .build()
 
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE)
