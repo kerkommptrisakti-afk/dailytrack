@@ -70,26 +70,52 @@ class MainActivity : FlutterActivity() {
                     result.success(true)
                 }
                 "requestBatteryOptimization" -> {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                        val pm = getSystemService(android.os.PowerManager::class.java)
-                        if (!pm.isIgnoringBatteryOptimizations(packageName)) {
+                    runOnUiThread {
+                        try {
+                            // Buka langsung ke App Settings OPPO
                             val intent = Intent(
-                                Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS
+                                Settings.ACTION_APPLICATION_DETAILS_SETTINGS
                             ).apply {
                                 data = Uri.parse("package:$packageName")
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                             }
-                            runOnUiThread { startActivity(intent) }
+                            startActivity(intent)
+                        } catch (e: Exception) {
+                            // Fallback ke Settings utama
+                            val intent = Intent(Settings.ACTION_SETTINGS).apply {
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                            startActivity(intent)
                         }
                     }
                     result.success(true)
                 }
                 "requestNotificationPermission" -> {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        runOnUiThread {
-                            requestPermissions(
-                                arrayOf(android.Manifest.permission.POST_NOTIFICATIONS),
-                                1001
-                            )
+                    runOnUiThread {
+                        try {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                requestPermissions(
+                                    arrayOf(android.Manifest.permission.POST_NOTIFICATIONS),
+                                    1001
+                                )
+                            } else {
+                                // Android 12 ke bawah — buka notif settings langsung
+                                val intent = Intent(
+                                    Settings.ACTION_APP_NOTIFICATION_SETTINGS
+                                ).apply {
+                                    putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
+                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                }
+                                startActivity(intent)
+                            }
+                        } catch (e: Exception) {
+                            val intent = Intent(
+                                Settings.ACTION_APPLICATION_DETAILS_SETTINGS
+                            ).apply {
+                                data = Uri.parse("package:$packageName")
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                            startActivity(intent)
                         }
                     }
                     result.success(true)
