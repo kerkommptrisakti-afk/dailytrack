@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'core/theme/app_colors.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'core/theme/app_theme.dart';
+import 'features/onboarding/presentation/onboarding_screen.dart';
 import 'main_shell.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
@@ -19,15 +21,20 @@ void main() async {
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
+
+  final prefs = await SharedPreferences.getInstance();
+  final onboardingDone = prefs.getBool('onboarding_done') ?? false;
+
   runApp(
-    const ProviderScope(
-      child: DailyTrackApp(),
+    ProviderScope(
+      child: DailyTrackApp(onboardingDone: onboardingDone),
     ),
   );
 }
 
 class DailyTrackApp extends StatelessWidget {
-  const DailyTrackApp({super.key});
+  final bool onboardingDone;
+  const DailyTrackApp({super.key, required this.onboardingDone});
 
   @override
   Widget build(BuildContext context) {
@@ -35,7 +42,7 @@ class DailyTrackApp extends StatelessWidget {
       title: 'DailyTrack',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.dark,
-      home: const MainShell(),
+      home: onboardingDone ? const MainShell() : const OnboardingScreen(),
     );
   }
 }

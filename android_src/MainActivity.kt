@@ -66,6 +66,30 @@ class MainActivity : FlutterActivity() {
                 "createChannel" -> {
                     createNotificationChannel()
                     result.success(true)
+                    requestBatteryOptimization" -> {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+        val pm = getSystemService(android.os.PowerManager::class.java)
+        if (!pm.isIgnoringBatteryOptimizations(packageName)) {
+            val intent = Intent(
+                android.provider.Settings
+                    .ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS
+            ).apply {
+                data = android.net.Uri.parse("package:$packageName")
+            }
+            startActivity(intent)
+        }
+    }
+    result.success(true)
+}
+"requestNotificationPermission" -> {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        requestPermissions(
+            arrayOf(android.Manifest.permission.POST_NOTIFICATIONS),
+            1001
+        )
+    }
+    result.success(true)
+}
                 }
                 else -> result.notImplemented()
             }
