@@ -20,6 +20,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   int _currentPage = 0;
   late AnimationController _fadeCtrl;
   late Animation<double> _fadeAnim;
+  bool _permissionGranted = false;
 
   final _pages = const [
     _OnboardingPage(
@@ -85,6 +86,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
   void _next() {
     HapticFeedback.lightImpact();
+    setState(() => _permissionGranted = false);
     if (_currentPage < _pages.length - 1) {
       _pageCtrl.nextPage(
         duration: const Duration(milliseconds: 400),
@@ -120,7 +122,14 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         await channel.invokeMethod('requestBatteryOptimization');
       }
     } catch (_) {}
-    _next();
+    // Setelah tap izinkan, tampilkan tombol Lanjut
+    setState(() => _permissionGranted = true);
+  }
+
+  bool get _showNextButton {
+    final page = _pages[_currentPage];
+    if (!page.isPermission) return true;
+    return _permissionGranted;
   }
 
   @override
@@ -137,12 +146,12 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                 Expanded(
                   child: PageView.builder(
                     controller: _pageCtrl,
+                    physics: const NeverScrollableScrollPhysics(),
                     onPageChanged: (i) => setState(() => _currentPage = i),
                     itemCount: _pages.length,
                     itemBuilder: (_, i) => _PageContent(
                       page: _pages[i],
                       onPermission: _handlePermission,
-                      onNext: _next,
                     ),
                   ),
                 ),
@@ -151,6 +160,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                     padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
                     child: Column(
                       children: [
+                        // Dots
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: List.generate(
@@ -170,24 +180,34 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                           ),
                         ),
                         const SizedBox(height: 24),
-                        if (!_pages[_currentPage].isPermission)
-                          GestureDetector(
-                            onTap: _next,
+                        // Next button — muncul setelah permission di-tap
+                        AnimatedOpacity(
+                          opacity: _showNextButton ? 1.0 : 0.3,
+                          duration: const Duration(milliseconds: 300),
+                          child: GestureDetector(
+                            onTap: _showNextButton ? _next : null,
                             child: Container(
                               width: double.infinity,
                               padding: const EdgeInsets.symmetric(vertical: 16),
                               decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  colors: [AppColors.violet, AppColors.blue],
+                                gradient: LinearGradient(
+                                  colors: _showNextButton
+                                      ? [AppColors.violet, AppColors.blue]
+                                      : [AppColors.glassBg, AppColors.glassBg],
                                 ),
                                 borderRadius: BorderRadius.circular(18),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: AppColors.violet.withOpacity(0.4),
-                                    blurRadius: 20,
-                                    offset: const Offset(0, 6),
-                                  ),
-                                ],
+                                border: _showNextButton
+                                    ? null
+                                    : Border.all(color: AppColors.glassBorderSm),
+                                boxShadow: _showNextButton
+                                    ? [
+                                        BoxShadow(
+                                          color: AppColors.violet.withOpacity(0.4),
+                                          blurRadius: 20,
+                                          offset: const Offset(0, 6),
+                                        ),
+                                      ]
+                                    : null,
                               ),
                               child: Text(
                                 _currentPage == _pages.length - 1
@@ -195,7 +215,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                                     : 'Lanjut',
                                 textAlign: TextAlign.center,
                                 style: GoogleFonts.syne(
-                                  color: Colors.white,
+                                  color: _showNextButton
+                                      ? Colors.white
+                                      : AppColors.textTertiary,
                                   fontSize: 16,
                                   fontWeight: FontWeight.w700,
                                   decoration: TextDecoration.none,
@@ -203,6 +225,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                               ),
                             ),
                           ),
+                        ),
                         if (_currentPage < _pages.length - 1) ...[
                           const SizedBox(height: 12),
                           GestureDetector(
@@ -233,12 +256,10 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 class _PageContent extends StatelessWidget {
   final _OnboardingPage page;
   final Function(String) onPermission;
-  final VoidCallback onNext;
 
   const _PageContent({
     required this.page,
     required this.onPermission,
-    required this.onNext,
   });
 
   @override
@@ -404,23 +425,11 @@ class _PageContent extends StatelessWidget {
                   ),
                   child: Column(
                     children: [
-                      _StepGuide(
-                        step: '1',
-                        text: 'Swipe ke Recent Apps',
-                        color: AppColors.green,
-                      ),
+                      _StepGuide(step: '1', text: 'Swipe ke Recent Apps', color: AppColors.green),
                       const SizedBox(height: 12),
-                      _StepGuide(
-                        step: '2',
-                        text: 'Cari app DailyTrack',
-                        color: AppColors.green,
-                      ),
+                      _StepGuide(step: '2', text: 'Cari app DailyTrack', color: AppColors.green),
                       const SizedBox(height: 12),
-                      _StepGuide(
-                        step: '3',
-                        text: 'Tap & tahan → pilih Lock',
-                        color: AppColors.green,
-                      ),
+                      _StepGuide(step: '3', text: 'Tap & tahan → pilih Lock', color: AppColors.green),
                     ],
                   ),
                 ),
@@ -437,11 +446,7 @@ class _StepGuide extends StatelessWidget {
   final String text;
   final Color color;
 
-  const _StepGuide({
-    required this.step,
-    required this.text,
-    required this.color,
-  });
+  const _StepGuide({required this.step, required this.text, required this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -458,11 +463,7 @@ class _StepGuide extends StatelessWidget {
           child: Center(
             child: Text(
               step,
-              style: TextStyle(
-                color: color,
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-              ),
+              style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w700),
             ),
           ),
         ),
