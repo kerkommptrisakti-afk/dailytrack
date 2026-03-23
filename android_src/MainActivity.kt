@@ -99,28 +99,28 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun scheduleNotification(
-        id: Int, title: String, body: String,
-        triggerMs: Long, activityId: String
-    ) {
-        val intent = Intent(this, NotificationReceiver::class.java).apply {
-            putExtra("id", id)
-            putExtra("title", title)
-            putExtra("body", body)
-            putExtra("activityId", activityId)
-        }
-        val pendingIntent = PendingIntent.getBroadcast(
-            this, id, intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-        val alarm = getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            alarm.setExactAndAllowWhileIdle(
-                AlarmManager.RTC_WAKEUP, triggerMs, pendingIntent
-            )
-        } else {
-            alarm.setExact(AlarmManager.RTC_WAKEUP, triggerMs, pendingIntent)
-        }
+    id: Int, title: String, body: String,
+    triggerMs: Long, activityId: String
+) {
+    val intent = Intent(this, NotificationReceiver::class.java).apply {
+        putExtra("id", id)
+        putExtra("title", title)
+        putExtra("body", body)
+        putExtra("activityId", activityId)
     }
+    val pendingIntent = PendingIntent.getBroadcast(
+        this, id, intent,
+        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+    )
+    val launchIntent = packageManager.getLaunchIntentForPackage(packageName)
+    val showIntent = PendingIntent.getActivity(
+        this, 0, launchIntent,
+        PendingIntent.FLAG_IMMUTABLE
+    )
+    val alarm = getSystemService(Context.ALARM_SERVICE) as AlarmManager
+    val alarmInfo = AlarmManager.AlarmClockInfo(triggerMs, showIntent)
+    alarm.setAlarmClock(alarmInfo, pendingIntent)
+}
 
     private fun cancelNotification(id: Int) {
         val intent = Intent(this, NotificationReceiver::class.java)
