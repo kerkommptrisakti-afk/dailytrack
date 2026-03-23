@@ -36,38 +36,40 @@ class NotificationService {
   /// 1. Tepat waktu kegiatan
   /// 2. X menit sebelum (sesuai reminderMinutes)
   static Future<void> scheduleForActivity({
-    required String activityId,
-    required String title,
-    required DateTime activityTime,
-    int? reminderMinutes,
-  }) async {
-    final baseId = activityId.hashCode.abs();
+  required String activityId,
+  required String title,
+  required DateTime activityTime,
+  int? reminderMinutes,
+}) async {
+  final baseId = activityId.hashCode.abs();
+  final timeStr =
+      '${activityTime.hour.toString().padLeft(2, '0')}:${activityTime.minute.toString().padLeft(2, '0')}';
 
-    // Notif tepat waktu
-    if (activityTime.isAfter(DateTime.now())) {
+  // Notif tepat waktu
+  if (activityTime.isAfter(DateTime.now())) {
+    await schedule(
+      id: baseId,
+      title: '⏰ Waktunya: $title',
+      body: 'Kegiatan kamu jam $timeStr dimulai sekarang!',
+      triggerTime: activityTime,
+    );
+  }
+
+  // Notif X menit sebelum
+  if (reminderMinutes != null && reminderMinutes > 0) {
+    final reminderTime = activityTime.subtract(
+      Duration(minutes: reminderMinutes),
+    );
+    if (reminderTime.isAfter(DateTime.now())) {
       await schedule(
-        id: baseId,
-        title: '⏰ $title',
-        body: 'Waktunya dimulai sekarang!',
-        triggerTime: activityTime,
+        id: baseId + 1,
+        title: '🔔 $reminderMinutes menit lagi: $title',
+        body: 'Persiapkan dirimu! Kegiatan dimulai jam $timeStr',
+        triggerTime: reminderTime,
       );
-    }
-
-    // Notif X menit sebelum
-    if (reminderMinutes != null && reminderMinutes > 0) {
-      final reminderTime = activityTime.subtract(
-        Duration(minutes: reminderMinutes),
-      );
-      if (reminderTime.isAfter(DateTime.now())) {
-        await schedule(
-          id: baseId + 1,
-          title: '🔔 $title',
-          body: '$reminderMinutes menit lagi dimulai',
-          triggerTime: reminderTime,
-        );
-      }
     }
   }
+}
 
   static Future<void> cancelForActivity(String activityId) async {
     final baseId = activityId.hashCode.abs();
