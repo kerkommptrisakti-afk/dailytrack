@@ -17,21 +17,16 @@ class FocusScreen extends StatefulWidget {
 
 class _FocusScreenState extends State<FocusScreen>
     with TickerProviderStateMixin {
-  // ── Timer State ───────────────────────────────────────────────
   PomodoroState _state = PomodoroState.idle;
   Timer? _timer;
   int _secondsLeft = 25 * 60;
   int _sessionsCompleted = 0;
   bool _isRunning = false;
-
-  // ── Settings ──────────────────────────────────────────────────
   int _workMinutes = 25;
   int _shortBreakMinutes = 5;
   int _longBreakMinutes = 15;
   int _sessionsBeforeLongBreak = 4;
 
-  // ── Animation ─────────────────────────────────────────────────
-  late AnimationController _progressCtrl;
   late AnimationController _pulseCtrl;
   late Animation<double> _pulseAnim;
 
@@ -39,12 +34,6 @@ class _FocusScreenState extends State<FocusScreen>
   void initState() {
     super.initState();
     _secondsLeft = _workMinutes * 60;
-
-    _progressCtrl = AnimationController(
-      vsync: this,
-      duration: Duration(seconds: _workMinutes * 60),
-    );
-
     _pulseCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1000),
@@ -57,7 +46,6 @@ class _FocusScreenState extends State<FocusScreen>
   @override
   void dispose() {
     _timer?.cancel();
-    _progressCtrl.dispose();
     _pulseCtrl.dispose();
     super.dispose();
   }
@@ -75,7 +63,7 @@ class _FocusScreenState extends State<FocusScreen>
   }
 
   double get _progress =>
-      (_totalSeconds - _secondsLeft) / _totalSeconds;
+      _totalSeconds == 0 ? 0 : (_totalSeconds - _secondsLeft) / _totalSeconds;
 
   Color get _stateColor {
     switch (_state) {
@@ -159,18 +147,13 @@ class _FocusScreenState extends State<FocusScreen>
     HapticFeedback.heavyImpact();
     _pulseCtrl.stop();
     _timer?.cancel();
-
     if (_state == PomodoroState.work) {
       final newSessions = _sessionsCompleted + 1;
       final isLongBreak = newSessions % _sessionsBeforeLongBreak == 0;
       setState(() {
         _sessionsCompleted = newSessions;
-        _state = isLongBreak
-            ? PomodoroState.longBreak
-            : PomodoroState.shortBreak;
-        _secondsLeft = isLongBreak
-            ? _longBreakMinutes * 60
-            : _shortBreakMinutes * 60;
+        _state = isLongBreak ? PomodoroState.longBreak : PomodoroState.shortBreak;
+        _secondsLeft = isLongBreak ? _longBreakMinutes * 60 : _shortBreakMinutes * 60;
         _isRunning = false;
       });
     } else {
@@ -219,7 +202,6 @@ class _FocusScreenState extends State<FocusScreen>
           SafeArea(
             child: Column(
               children: [
-                // Header
                 Padding(
                   padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
                   child: Row(
@@ -253,41 +235,30 @@ class _FocusScreenState extends State<FocusScreen>
                     ],
                   ),
                 ),
-                // Sessions indicator
                 Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 16,
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(
-                      _sessionsBeforeLongBreak,
-                      (i) => Container(
+                    children: List.generate(_sessionsBeforeLongBreak, (i) {
+                      final filled = i < (_sessionsCompleted % _sessionsBeforeLongBreak);
+                      return Container(
                         width: 32,
                         height: 6,
                         margin: const EdgeInsets.symmetric(horizontal: 3),
                         decoration: BoxDecoration(
-                          color: i < _sessionsCompleted % _sessionsBeforeLongBreak ||
-                                  (_sessionsCompleted > 0 &&
-                                      _sessionsCompleted % _sessionsBeforeLongBreak == 0)
-                              ? _stateColor
-                              : AppColors.glassBg,
+                          color: filled ? _stateColor : AppColors.glassBg,
                           borderRadius: BorderRadius.circular(3),
                           border: Border.all(
-                            color: i < _sessionsCompleted % _sessionsBeforeLongBreak ||
-                                    (_sessionsCompleted > 0 &&
-                                        _sessionsCompleted % _sessionsBeforeLongBreak == 0)
+                            color: filled
                                 ? _stateColor.withOpacity(0.5)
                                 : AppColors.glassBorderSm,
                           ),
                         ),
-                      ),
-                    ),
+                      );
+                    }),
                   ),
                 ),
                 const Spacer(),
-                // Timer circle
                 AnimatedBuilder(
                   animation: _pulseAnim,
                   builder: (_, child) => Transform.scale(
@@ -300,7 +271,6 @@ class _FocusScreenState extends State<FocusScreen>
                     child: Stack(
                       alignment: Alignment.center,
                       children: [
-                        // Background circle
                         SizedBox(
                           width: 260,
                           height: 260,
@@ -310,7 +280,6 @@ class _FocusScreenState extends State<FocusScreen>
                             color: AppColors.glassBg,
                           ),
                         ),
-                        // Progress circle
                         SizedBox(
                           width: 260,
                           height: 260,
@@ -321,13 +290,9 @@ class _FocusScreenState extends State<FocusScreen>
                             strokeCap: StrokeCap.round,
                           ),
                         ),
-                        // Center content
                         ClipOval(
                           child: BackdropFilter(
-                            filter: ImageFilter.blur(
-                              sigmaX: 20,
-                              sigmaY: 20,
-                            ),
+                            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
                             child: Container(
                               width: 220,
                               height: 220,
@@ -381,20 +346,13 @@ class _FocusScreenState extends State<FocusScreen>
                   ),
                 ),
                 const Spacer(),
-                // Controls
                 Padding(
                   padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      // Reset
-                      _ControlButton(
-                        icon: Icons.refresh_rounded,
-                        onTap: _reset,
-                        size: 52,
-                      ),
+                      _ControlButton(icon: Icons.refresh_rounded, onTap: _reset, size: 52),
                       const SizedBox(width: 20),
-                      // Play/Pause
                       GestureDetector(
                         onTap: _startPause,
                         child: Container(
@@ -405,10 +363,7 @@ class _FocusScreenState extends State<FocusScreen>
                             gradient: LinearGradient(
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
-                              colors: [
-                                _stateColor,
-                                _stateColor.withOpacity(0.7),
-                              ],
+                              colors: [_stateColor, _stateColor.withOpacity(0.7)],
                             ),
                             boxShadow: [
                               BoxShadow(
@@ -419,25 +374,17 @@ class _FocusScreenState extends State<FocusScreen>
                             ],
                           ),
                           child: Icon(
-                            _isRunning
-                                ? Icons.pause_rounded
-                                : Icons.play_arrow_rounded,
+                            _isRunning ? Icons.pause_rounded : Icons.play_arrow_rounded,
                             color: Colors.white,
                             size: 32,
                           ),
                         ),
                       ),
                       const SizedBox(width: 20),
-                      // Skip
-                      _ControlButton(
-                        icon: Icons.skip_next_rounded,
-                        onTap: _skip,
-                        size: 52,
-                      ),
+                      _ControlButton(icon: Icons.skip_next_rounded, onTap: _skip, size: 52),
                     ],
                   ),
                 ),
-                // Stats
                 Padding(
                   padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
                   child: Row(
@@ -450,7 +397,7 @@ class _FocusScreenState extends State<FocusScreen>
                       const SizedBox(width: 12),
                       _StatChip(
                         label: 'Total Fokus',
-                        value: '${(_sessionsCompleted * _workMinutes)} mnt',
+                        value: '${_sessionsCompleted * _workMinutes} mnt',
                         color: AppColors.amberLight,
                       ),
                     ],
@@ -470,11 +417,7 @@ class _ControlButton extends StatelessWidget {
   final VoidCallback onTap;
   final double size;
 
-  const _ControlButton({
-    required this.icon,
-    required this.onTap,
-    required this.size,
-  });
+  const _ControlButton({required this.icon, required this.onTap, required this.size});
 
   @override
   Widget build(BuildContext context) {
@@ -499,11 +442,7 @@ class _StatChip extends StatelessWidget {
   final String value;
   final Color color;
 
-  const _StatChip({
-    required this.label,
-    required this.value,
-    required this.color,
-  });
+  const _StatChip({required this.label, required this.value, required this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -608,7 +547,7 @@ class _SettingsSheetState extends State<_SettingsSheet> {
             max: 60,
             unit: 'menit',
             color: AppColors.violetLight,
-            onChanged: (v) => setState(() => _work =setState(() => _work = v),
+            onChanged: (v) => setState(() => _work = v),
           ),
           const SizedBox(height: 16),
           _SettingRow(
@@ -659,7 +598,7 @@ class _SettingsSheetState extends State<_SettingsSheet> {
                     color: AppColors.violet.withOpacity(0.35),
                     blurRadius: 12,
                     offset: const Offset(0, 4),
-                  ),
+   ),
                 ],
               ),
               child: Text(
@@ -728,20 +667,18 @@ class _SettingRow extends StatelessWidget {
                 child: Icon(
                   Icons.remove_rounded,
                   size: 16,
-                  color: value > min
-                      ? AppColors.textSecondary
-                      : AppColors.textTertiary,
+                  color: value > min ? AppColors.textSecondary : AppColors.textTertiary,
                 ),
               ),
             ),
             const SizedBox(width: 12),
             SizedBox(
-              width: 48,
+              width: 60,
               child: Text(
                 '$value $unit',
                 textAlign: TextAlign.center,
                 style: GoogleFonts.syne(
-                  fontSize: 14,
+                  fontSize: 13,
                   fontWeight: FontWeight.w700,
                   color: color,
                   decoration: TextDecoration.none,
@@ -762,9 +699,7 @@ class _SettingRow extends StatelessWidget {
                 child: Icon(
                   Icons.add_rounded,
                   size: 16,
-                  color: value < max
-                      ? AppColors.textSecondary
-                      : AppColors.textTertiary,
+                  color: value < max ? AppColors.textSecondary : AppColors.textTertiary,
                 ),
               ),
             ),
