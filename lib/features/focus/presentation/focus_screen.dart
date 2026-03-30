@@ -320,7 +320,7 @@ class _FocusScreenState extends State<FocusScreen>
                                   Text(
                                     _timeString,
                                     style: GoogleFonts.syne(
-                                      fontSize: 52,
+                                      fontSize: 42,
                                       fontWeight: FontWeight.w800,
                                       color: Colors.white,
                                       letterSpacing: -2,
