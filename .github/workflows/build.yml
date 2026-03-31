@@ -82,8 +82,19 @@ jobs:
         run: |
           mkdir -p android/app/src/main/kotlin/id/dailytrack/fresh
           mkdir -p android/app/src/main/res/layout
+          mkdir -p android/app/src/main/res/xml
+          mkdir -p android/app/src/main/res/values
           cp android_src/MainActivity.kt android/app/src/main/kotlin/id/dailytrack/fresh/MainActivity.kt
-          cp android_src/layout/notification_custom.xml android/app/src/main/res/layout/notification_custom.xml
+          cp android_src/DailyTrackWidget.kt android/app/src/main/kotlin/id/dailytrack/fresh/DailyTrackWidget.kt
+          cp android_src/layout/widget_layout.xml android/app/src/main/res/layout/widget_layout.xml
+          cp android_src/xml/widget_info.xml android/app/src/main/res/xml/widget_info.xml
+          cat > android/app/src/main/res/values/strings.xml << 'STRINGS'
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <string name="app_name">DailyTrack</string>
+              <string name="widget_description">DailyTrack kegiatan hari ini</string>
+          </resources>
+          STRINGS
 
       - name: Patch AndroidManifest
         run: |
@@ -128,6 +139,16 @@ jobs:
                           <action android:name="id.dailytrack.fresh.ACTION_DONE"/>
                           <action android:name="id.dailytrack.fresh.ACTION_SNOOZE"/>
                       </intent-filter>
+                  </receiver>
+                  <receiver
+                      android:name=".DailyTrackWidget"
+                      android:exported="true">
+                      <intent-filter>
+                          <action android:name="android.appwidget.action.APPWIDGET_UPDATE"/>
+                      </intent-filter>
+                      <meta-data
+                          android:name="android.appwidget.provider"
+                          android:resource="@xml/widget_info"/>
                   </receiver>
                   <meta-data
                       android:name="flutterEmbedding"
