@@ -33,18 +33,12 @@ class DailyTrackWidget : AppWidgetProvider() {
                 Context.MODE_PRIVATE
             )
 
-            // Ambil data dari SharedPreferences (disimpan Flutter)
             val activitiesJson = prefs.getString("flutter.activities_v2", null)
             val todayCount = getTodayCount(activitiesJson)
             val doneCount = getDoneCount(activitiesJson)
             val nextActivity = getNextActivity(activitiesJson)
             val nextTime = getNextTime(activitiesJson)
 
-            // Format tanggal
-            val dateFormat = SimpleDateFormat("EEE, d MMM", Locale("id", "ID"))
-            val today = dateFormat.format(Date())
-
-            // Launch intent
             val launchIntent = context.packageManager
                 .getLaunchIntentForPackage(context.packageName)
             val pendingIntent = PendingIntent.getActivity(
@@ -56,21 +50,21 @@ class DailyTrackWidget : AppWidgetProvider() {
                 context.packageName,
                 R.layout.widget_layout
             ).apply {
-                setTextViewText(R.id.widget_date, today)
-                setTextViewText(R.id.widget_count, "$todayCount")
                 setTextViewText(
                     R.id.widget_next_activity,
-                    if (nextActivity.isNotEmpty()) nextActivity
-                    else "Tidak ada kegiatan"
+                    if (nextActivity.isNotEmpty()) nextActivity else "Tidak ada kegiatan"
                 )
                 setTextViewText(
                     R.id.widget_next_time,
-                    if (nextTime.isNotEmpty()) nextTime
-                    else "Tap untuk buka app"
+                    if (nextTime.isNotEmpty()) nextTime else "Tap untuk buka app"
+                )
+                setTextViewText(
+                    R.id.widget_count,
+                    "$todayCount kegiatan"
                 )
                 setTextViewText(
                     R.id.widget_progress,
-                    "$doneCount dari $todayCount selesai"
+                    "$doneCount selesai"
                 )
                 setOnClickPendingIntent(R.id.widget_title, pendingIntent)
             }
@@ -81,40 +75,29 @@ class DailyTrackWidget : AppWidgetProvider() {
         private fun getTodayCount(json: String?): Int {
             if (json == null) return 0
             return try {
-                val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-                    .format(Date())
-                json.split("\"date\":\"").drop(1)
-                    .count { it.startsWith(today) }
+                val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+                json.split("\"date\":\"").drop(1).count { it.startsWith(today) }
             } catch (e: Exception) { 0 }
         }
 
         private fun getDoneCount(json: String?): Int {
             if (json == null) return 0
             return try {
-                val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-                    .format(Date())
-                var count = 0
-                val parts = json.split("\"date\":\"").drop(1)
-                for (part in parts) {
-                    if (part.startsWith(today) && part.contains("\"isDone\":true")) {
-                        count++
-                    }
-                }
-                count
+                val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+                json.split("\"date\":\"").drop(1)
+                    .count { it.startsWith(today) && it.contains("\"isDone\":true") }
             } catch (e: Exception) { 0 }
         }
 
         private fun getNextActivity(json: String?): String {
             if (json == null) return ""
             return try {
-                val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-                    .format(Date())
+                val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
                 val parts = json.split("\\{".toRegex()).drop(1)
                 for (part in parts) {
-                    if (part.contains("\"date\":\"$today") &&
-                        !part.contains("\"isDone\":true")) {
-                        val titleMatch = Regex("\"title\":\"([^\"]+)\"").find(part)
-                        if (titleMatch != null) return titleMatch.groupValues[1]
+                    if (part.contains("\"date\":\"$today") && !part.contains("\"isDone\":true")) {
+                        val match = Regex("\"title\":\"([^\"]+)\"").find(part)
+                        if (match != null) return match.groupValues[1]
                     }
                 }
                 ""
@@ -124,25 +107,19 @@ class DailyTrackWidget : AppWidgetProvider() {
         private fun getNextTime(json: String?): String {
             if (json == null) return ""
             return try {
-                val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-                    .format(Date())
+                val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
                 val parts = json.split("\\{".toRegex()).drop(1)
                 for (part in parts) {
-                    if (part.contains("\"date\":\"$today") &&
-                        !part.contains("\"isDone\":true")) {
-                        val timeMatch = Regex("\"time\":\"([^\"]+)\"").find(part)
-                        if (timeMatch != null) {
-                            val timeStr = timeMatch.groupValues[1]
-                            return try {
-                                val dt = java.text.SimpleDateFormat(
-                                    "yyyy-MM-dd'T'HH:mm:ss.SSS",
-                                    Locale.getDefault()
-                                ).parse(timeStr)
-                                if (dt != null) {
-                                    SimpleDateFormat("HH:mm", Locale.getDefault())
-                                        .format(dt)
-                                } else ""
-                            } catch (e: Exception) { "" }
+                    if (part.contains("\"date\":\"$today") && !part.contains("\"isDone\":true")) {
+                        val match = Regex("\"time\":\"([^\"]+)\"").find(part)
+                        if (match != null) {
+                            val dt = SimpleDateFormat(
+                                "yyyy-MM-dd'T'HH:mm:ss.SSS",
+                                Locale.getDefault()
+                            ).parse(match.groupValues[1])
+                            if (dt != null) {
+                                return SimpleDateFormat("HH:mm", Locale.getDefault()).format(dt)
+                            }
                         }
                     }
                 }
